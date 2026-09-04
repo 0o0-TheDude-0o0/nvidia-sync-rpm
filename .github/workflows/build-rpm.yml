@@ -28,6 +28,7 @@ jobs:
         env:
           DEB_URL: ${{ inputs.deb_url || steps.source.outputs.url }}
         run: |
+          set -o pipefail
           ./build-rpm.sh "$DEB_URL" | tee build-output.txt
           echo "RPM_PATH=$(sed -n 's/^rpm_path=//p' build-output.txt)" >> "$GITHUB_ENV"
           echo "RPM_VERSION=$(sed -n 's/^rpm_version=//p' build-output.txt)" >> "$GITHUB_ENV"
