@@ -31,11 +31,12 @@ jobs:
           ./build-rpm.sh "$DEB_URL" | tee build-output.txt
           echo "RPM_PATH=$(sed -n 's/^rpm_path=//p' build-output.txt)" >> "$GITHUB_ENV"
           echo "RPM_VERSION=$(sed -n 's/^rpm_version=//p' build-output.txt)" >> "$GITHUB_ENV"
+          find . -type f -name '*.rpm' -print
       - name: Upload RPM artifact
         uses: actions/upload-artifact@v4
         with:
           name: nvidia-sync-rpm
-          path: dist
+          path: '**/*.rpm'
           if-no-files-found: error
       - name: Publish versioned GitHub release
         uses: softprops/action-gh-release@v2
