@@ -1,0 +1,46 @@
+name: Build NVIDIA Sync RPM
+
+on:
+  workflow_dispatch:
+    inputs:
+      deb_url:
+        description: Debian package URL
+        required: false
+        default: https://workbench.download.nvidia.com/stable/linux/debian/pool/proprietary/n/nvidia-sync/nvidia-sync_0.117.3_amd64.deb
+        type: string
+  schedule:
+    - cron: '17 4 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install --yes dpkg-dev rpm
+      - name: Resolve latest NVIDIA package
+        id: source
+        run: echo "url=$(./resolve-deb-url.sh)" >> "$GITHUB_OUTPUT"
+      - name: Build RPM
+        env:
+          DEB_URL: ${{ inputs.deb_url || steps.source.outputs.url }}
+        run: |
+          ./build-rpm.sh "$DEB_URL" | tee build-output.txt
+          echo "RPM_PATH=$(sed -n 's/^rpm_path=//p' build-output.txt)" >> "$GITHUB_ENV"
+          echo "RPM_VERSION=$(sed -n 's/^rpm_version=//p' build-output.txt)" >> "$GITHUB_ENV"
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nvidia-sync-rpm-${{ env.RPM_VERSION }}
+          path: dist/*.rpm
+          if-no-files-found: error
+      - name: Publish versioned GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nvidia-sync-${{ env.RPM_VERSION }}
+          name: NVIDIA Sync ${{ env.RPM_VERSION }}
+          generate_release_notes: true
+          files: dist/*.rpm
